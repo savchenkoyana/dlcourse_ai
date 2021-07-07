@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def softmax(predictions):
     '''
     Computes probabilities from scores
@@ -13,28 +12,32 @@ def softmax(predictions):
       probs, np array of the same shape as predictions - 
         probability for every class, 0..1
     '''
-    # TODO implement softmax
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
-
-
+    max_predictions = np.max(predictions) if predictions.ndim == 1 else np.max(predictions, axis=1).reshape((-1,1)) 
+    predictions_shifted = predictions - max_predictions
+    exps = np.exp(predictions_shifted)
+    return exps/np.sum(exps) if predictions.ndim == 1 else exps/np.sum(exps, axis=1).reshape((-1,1))
+    
 def cross_entropy_loss(probs, target_index):
     '''
     Computes cross-entropy loss
 
     Arguments:
-      probs, np array, shape is either (N) or (batch_size, N) -
+      probs, np array, shape is either (N,1) or (batch_size, N) -
         probabilities for every class
-      target_index: np array of int, shape is (1) or (batch_size) -
+      target_index: either int or np.array of shape (batch_size, 1) -
         index of the true class for given sample(s)
 
     Returns:
       loss: single value
     '''
-    # TODO implement cross-entropy
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    p = np.zeros(probs.shape)
+    if probs.ndim == 2:
+        p[np.arange(probs.shape[0]), target_index.flatten()] = 1
+    elif probs.ndim == 1:
+        p[target_index] = 1
 
+    return -np.sum(p * np.log(probs)) if probs.ndim == 1 else -np.sum(p * np.log(probs), axis=1).mean()
+    
 
 def softmax_with_cross_entropy(predictions, target_index):
     '''
@@ -51,10 +54,18 @@ def softmax_with_cross_entropy(predictions, target_index):
       loss, single value - cross-entropy loss
       dprediction, np array same shape as predictions - gradient of predictions by loss value
     '''
-    # TODO implement softmax with cross-entropy
-    # Your final implementation shouldn't have any loops
-    raise Exception("Not implemented!")
+    sm = softmax(predictions)
+    loss = cross_entropy_loss(sm, target_index)
+    p = np.zeros(sm.shape)
+    batch_size = predictions.shape[0]
+    
+    if predictions.ndim == 1:
+        p[target_index] = 1
+    elif predictions.ndim == 2:
+        p[np.arange(sm.shape[0]), target_index.flatten()] = 1
 
+    dprediction = (sm-p)/batch_size
+        
     return loss, dprediction
 
 
