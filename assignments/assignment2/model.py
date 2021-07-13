@@ -17,8 +17,10 @@ class TwoLayerNet:
         reg, float - L2 regularization strength
         """
         self.reg = reg
-        # TODO Create necessary layers
-        raise Exception("Not implemented!")
+        self.fc1 = FullyConnectedLayer(n_input, hidden_layer_size)
+        self.relu = ReLULayer()
+        self.fc2 = FullyConnectedLayer(hidden_layer_size, n_output)
+        self.layers = [self.fc1, self.relu, self.fc2]
 
     def compute_loss_and_gradients(self, X, y):
         """
@@ -29,18 +31,22 @@ class TwoLayerNet:
         X, np array (batch_size, input_features) - input data
         y, np array of int (batch_size) - classes
         """
-        # Before running forward and backward pass through the model,
-        # clear parameter gradients aggregated from the previous pass
-        # TODO Set parameter gradient to zeros
-        # Hint: using self.params() might be useful!
-        raise Exception("Not implemented!")
+        x = X.copy()
         
-        # TODO Compute loss and fill param gradients
-        # by running forward and backward passes through the model
+        for param in self.params():
+            param.grad = 0
+        for layer in self.layers:
+            x = layer.forward(x)
         
-        # After that, implement l2 regularization on all params
-        # Hint: self.params() is useful again!
-        raise Exception("Not implemented!")
+        loss, dprediction = softmax_with_cross_entropy(x, y)
+        
+        for layer in reversed(self.layers):
+            dprediction = layer.backward(dprediction)
+            
+        for param in self.params():
+            l2_loss, l2_grad = l2_regularization(param.value, self.reg)
+            loss += l2_loss
+            param.grad += l2_grad
 
         return loss
 
@@ -64,9 +70,8 @@ class TwoLayerNet:
 
     def params(self):
         result = {}
-
-        # TODO Implement aggregating all of the params
-
-        raise Exception("Not implemented!")
-
+        for layer in self.layers:
+            if layer.params():
+                name, param = layer.params()
+                result[name] = layer.params()
         return result
