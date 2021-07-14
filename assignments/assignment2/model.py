@@ -1,6 +1,6 @@
 import numpy as np
 
-from layers import FullyConnectedLayer, ReLULayer, softmax_with_cross_entropy, l2_regularization
+from layers import Param, FullyConnectedLayer, ReLULayer, softmax, softmax_with_cross_entropy, l2_regularization
 
 
 class TwoLayerNet:
@@ -33,7 +33,7 @@ class TwoLayerNet:
         """
         x = X.copy()
         
-        for param in self.params():
+        for name, param in self.params().items():
             param.grad = 0
         for layer in self.layers:
             x = layer.forward(x)
@@ -43,7 +43,7 @@ class TwoLayerNet:
         for layer in reversed(self.layers):
             dprediction = layer.backward(dprediction)
             
-        for param in self.params():
+        for name, param in self.params().items():
             l2_loss, l2_grad = l2_regularization(param.value, self.reg)
             loss += l2_loss
             param.grad += l2_grad
@@ -60,18 +60,22 @@ class TwoLayerNet:
         Returns:
           y_pred, np.array of int (test_samples)
         """
-        # TODO: Implement predict
-        # Hint: some of the code of the compute_loss_and_gradients
-        # can be reused
-        pred = np.zeros(X.shape[0], np.int)
-
-        raise Exception("Not implemented!")
-        return pred
+        x = X.copy()
+        
+        for layer in self.layers:
+            x = layer.forward(x)
+        
+        probs = softmax(x)
+        y_pred = np.argmax(probs, axis=1)        
+        
+        return y_pred
 
     def params(self):
         result = {}
+        n_params = 0
         for layer in self.layers:
             if layer.params():
-                name, param = layer.params()
-                result[name] = layer.params()
+                for name, param in layer.params().items():
+                    result["param_"+str(n_params)] = param
+                    n_params += 1
         return result
