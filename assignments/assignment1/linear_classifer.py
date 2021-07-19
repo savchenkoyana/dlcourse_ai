@@ -114,7 +114,7 @@ class LinearSoftmaxClassifier():
         self.W = None
 
     def fit(self, X, y, batch_size=100, learning_rate=1e-7, reg=1e-5,
-            epochs=1):
+            epochs=1, X_val=None, y_val=None):
         '''
         Trains linear classifier
         
@@ -134,6 +134,7 @@ class LinearSoftmaxClassifier():
             self.W = 0.001 * np.random.randn(num_features, num_classes)
 
         loss_history = []
+
         for epoch in range(epochs):
             shuffled_indices = np.arange(num_train)
             np.random.shuffle(shuffled_indices)
@@ -154,8 +155,13 @@ class LinearSoftmaxClassifier():
             self.W -= learning_rate * l2_grad
             
             loss_history.append(loss)
-            
-            #print("Epoch %i, loss: %f" % (epoch, loss))
+            	
+            if epoch%10==0:
+                if X_val is not None:
+                    val_loss, _ = linear_softmax(X_val, self.W, y_val)
+                    val_loss += l2_regularization(self.W, reg)[0]
+                    
+                    print("Epoch %i, loss: %f, val loss %f" %(epoch, loss, val_loss))
 
         return loss_history
 
