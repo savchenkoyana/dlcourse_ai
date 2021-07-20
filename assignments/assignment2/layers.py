@@ -55,7 +55,10 @@ def cross_entropy_loss(probs, target_index):
         p[np.arange(probs.shape[0]), target_index.flatten()] = 1
     elif probs.ndim == 1:
         p[target_index] = 1
-
+        
+    # in order to np.log not to crash with too small arguments
+    probs[probs < 1.0e-100] = 1.0e-100
+    
     return -np.sum(p * np.log(probs)) if probs.ndim == 1 else -np.sum(p * np.log(probs), axis=1).mean()
     
 
@@ -109,8 +112,9 @@ class ReLULayer:
         # Hint: you'll need to save some information about X
         # to use it later in the backward pass
         
-        self.X = (X>0).astype(int)
-        return X*self.X
+        self.X = X
+        
+        return X*(X>0).astype(int)
             
     def backward(self, d_out):
         """
@@ -124,7 +128,7 @@ class ReLULayer:
         d_result: np array (batch_size, num_features) - gradient
           with respect to input
         """
-        return d_out*self.X
+        return d_out*(self.X>0).astype(int)
         
     def params(self):
         # ReLU Doesn't have any parameters
