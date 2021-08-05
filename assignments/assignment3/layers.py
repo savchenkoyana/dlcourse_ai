@@ -198,7 +198,7 @@ class ConvolutionalLayer:
         
         output = np.zeros((batch_size, out_height, out_width, self.out_channels))
         
-        x = np.pad(X, pad_width=[(0,0),(0,0),(self.padding,self.padding),(self.padding,self.padding)])
+        x = np.pad(X, pad_width=[(0,0),(self.padding,self.padding),(self.padding,self.padding),(0,0)])
         
         self.X = x
         
@@ -208,17 +208,20 @@ class ConvolutionalLayer:
                 x_flat = x_flat.reshape((batch_size, -1))
                 W_flat = self.W.value.reshape((-1, self.out_channels))
                 output[:, i, j, :] = np.dot(x_flat, W_flat) + self.B.value
+
         return output
 
     def backward(self, d_out):
-        batch_size, height, width, channels = self.X.shape
+        batch_size, height_p, width_p, channels = self.X.shape
         _, out_height, out_width, out_channels = d_out.shape
 
         d_in = np.zeros(self.X.shape)
         W_flat = self.W.value.reshape((-1, self.out_channels)) 
 
-        self.B.grad[:] = 0
-        self.W.grad[:] = 0
+        print('B', self.B.value, type(self.B.value))
+        
+        #self.B.grad[:] = 0
+        #self.W.grad[:] = 0
         
         for i in range(out_height):
             for j in range(out_width):
@@ -226,13 +229,13 @@ class ConvolutionalLayer:
                 x_flat = x_flat.reshape((batch_size, -1))
                 
                 d_in[:, i:i+self.filter_size, j:j+self.filter_size, :] += (
-                    np.dot(d_out[:, i, j, :], W_flat.T)).reshape(self.X.shape)
+                    np.dot(d_out[:, i, j, :], W_flat.T)).reshape((batch_size, self.filter_size, self.filter_size, channels))
                 
                 self.W.grad += np.dot(x_flat.T, d_out[:, i, j, :]).reshape(self.W.grad.shape)
                 
                 self.B.grad += np.dot(np.ones((1, batch_size)), d_out[:, i, j, :]).reshape(self.B.grad.shape)
 
-        return d_in[:, self.padding : height-self.padding, self.padding : width-self.padding, :]
+        return d_in[:, self.padding : height_p-self.padding, self.padding : width_p-self.padding, :]
     
     def params(self):
         return { 'W': self.W, 'B': self.B }
@@ -253,16 +256,47 @@ class MaxPoolingLayer:
 
     def forward(self, X):
         batch_size, height, width, channels = X.shape
-        # TODO: Implement maxpool forward pass
-        # Hint: Similarly to Conv layer, loop on
-        # output x/y dimension
-        raise Exception("Not implemented!")
+
+        out_height = (height - self.pool_size)//self.stride + 1
+        out_width = (width - self.pool_size)//self.stride + 1
+        
+        output = np.zeros((batch_size, out_height, out_width, channels))
+        self.X = X
+        
+        for i in range(out_height):
+            for j in range(out_width):
+                x_flat = X[:, i*self.stride:i*self.stride+self.pool_size, j*self.stride:j*self.stride+self.pool_size, :]
+                output[:, i, j, :] = np.amax(x_flat, axis=(1,2))
+
+        return output
 
     def backward(self, d_out):
-        # TODO: Implement maxpool backward pass
         batch_size, height, width, channels = self.X.shape
-        raise Exception("Not implemented!")
+        d_in = np.zeros_like(self.X)
+        
+        _, out_height, out_width, out_channels = d_out.shape
+        
+        for i in range(out_height):
+            for j in range(out_width):
+                x_flat = self.X[:, i*self.stride:i*self.stride+self.pool_size, j*self.stride:j*self.stride+self.pool_size, :]
 
+                empty = np.zeros_like(x_flat)
+                max = np.amax(x_flat, axis=(1,2))
+                
+                for i1 in range(batch_size):
+                    for i2 in range(channels):
+                        empty[i1,:,:,i2][x_flat[i1,:,:,i2] == max[i1,i2]] = 1
+                        n_max = np.sum(empty[i1,:,:,i2])
+                        if n_max == 1:
+                            empty[i1,:,:,i2][x_flat[i1,:,:,i2] == max[i1,i2]] = d_out[i1,i,j,i2]
+                        else:
+                            empty[i1,:,:,i2][x_flat[i1,:,:,i2] == max[i1,i2]] = d_out[i1,i,j,i2]/n_max
+
+                d_in[:, i*self.stride:i*self.stride+self.pool_size, j*self.stride:j*self.stride+self.pool_size, :] += empty
+
+        return d_in
+        
+        
     def params(self):
         return {}
 
@@ -273,15 +307,12 @@ class Flattener:
 
     def forward(self, X):
         batch_size, height, width, channels = X.shape
-
-        # TODO: Implement forward pass
-        # Layer should return array with dimensions
-        # [batch_size, hight*width*channels]
-        raise Exception("Not implemented!")
-
+        self.X_shape = X.shape
+        return X.reshape((batch_size,-1))
+        
+        
     def backward(self, d_out):
-        # TODO: Implement backward pass
-        raise Exception("Not implemented!")
+        return d_out.reshape(self.X_shape)
 
     def params(self):
         # No params!

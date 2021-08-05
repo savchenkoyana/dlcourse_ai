@@ -3,8 +3,8 @@ import numpy as np
 from layers import (
     FullyConnectedLayer, ReLULayer,
     ConvolutionalLayer, MaxPoolingLayer, Flattener,
-    softmax_with_cross_entropy, l2_regularization
-    )
+    softmax_with_cross_entropy, l2_regularization,
+    softmax)
 
 
 class ConvNet:
@@ -26,8 +26,20 @@ class ConvNet:
         conv1_channels, int - number of filters in the 1st conv layer
         conv2_channels, int - number of filters in the 2nd conv layer
         """
-        # TODO Create necessary layers
-        raise Exception("Not implemented!")
+        height, width, n_channels = input_shape
+        
+        self.conv1 = ConvolutionalLayer(n_channels, n_channels, 3, 0)
+        self.relu1 = ReLULayer()
+        self.maxpool1 = MaxPoolingLayer(4, 4)
+        self.conv2 = ConvolutionalLayer(n_channels, n_channels, 3, 0)
+        self.relu2 = ReLULayer()
+        self.maxpool2 = MaxPoolingLayer(4, 4)
+        self.flr = Flattener()
+        self.fc = FullyConnectedLayer(n_channels, n_output_classes)
+        
+        self.layers = [self.conv1, self.relu1, self.maxpool1, 
+                       self.conv2, self.relu2, self.maxpool2,
+                       self.flr, self.fc]
 
     def compute_loss_and_gradients(self, X, y):
         """
@@ -38,23 +50,37 @@ class ConvNet:
         X, np array (batch_size, height, width, input_features) - input data
         y, np array of int (batch_size) - classes
         """
-        # Before running forward and backward pass through the model,
-        # clear parameter gradients aggregated from the previous pass
+                
+        for name, param in self.params().items():
+            param.grad = 0
+            
+        x = X.copy()
 
-        # TODO Compute loss and fill param gradients
-        # Don't worry about implementing L2 regularization, we will not
-        # need it in this assignment
-        raise Exception("Not implemented!")
+        for layer in self.layers:
+            x = layer.forward(x)
+        
+        loss, dprediction = softmax_with_cross_entropy(x, y)
 
+        for layer in reversed(self.layers):
+            dprediction = layer.backward(dprediction)
+        
+        return loss
+            
     def predict(self, X):
-        # You can probably copy the code from previous assignment
-        raise Exception("Not implemented!")
-
+        x = X.copy()
+        
+        for layer in self.layers:
+            x = layer.forward(x)
+            
+        probs = softmax(x)
+        y_pred = np.argmax(probs, axis=1)
+        return y_pred
+        
     def params(self):
         result = {}
-
-        # TODO: Aggregate all the params from all the layers
-        # which have parameters
-        raise Exception("Not implemented!")
-
+        n_params = 0
+        for layer in self.layers:
+            for name, param in layer.params().items():
+                result['param'+str(n_params)] = param
+                n_params += 1 
         return result
