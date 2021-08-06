@@ -28,14 +28,24 @@ class ConvNet:
         """
         height, width, n_channels = input_shape
         
-        self.conv1 = ConvolutionalLayer(n_channels, n_channels, 3, 0)
+        pooling = 4
+        stride = 4
+        padding = 0
+        kernel_size = 3
+        
+        self.conv1 = ConvolutionalLayer(n_channels, conv1_channels, kernel_size, padding)
         self.relu1 = ReLULayer()
-        self.maxpool1 = MaxPoolingLayer(4, 4)
-        self.conv2 = ConvolutionalLayer(n_channels, n_channels, 3, 0)
+        self.maxpool1 = MaxPoolingLayer(pooling, stride)
+
+        self.conv2 = ConvolutionalLayer(conv1_channels, conv2_channels, kernel_size, padding)
         self.relu2 = ReLULayer()
-        self.maxpool2 = MaxPoolingLayer(4, 4)
+        self.maxpool2 = MaxPoolingLayer(pooling, stride)
         self.flr = Flattener()
-        self.fc = FullyConnectedLayer(n_channels, n_output_classes)
+        
+        size1 = ( (height-kernel_size+1-pooling)//stride + 1, (width-kernel_size+1-pooling)//stride + 1 )        
+        size2 = ( (size1[0]-kernel_size+1-pooling)//stride + 1, (size1[1]-kernel_size+1-pooling)//stride + 1 )        
+
+        self.fc = FullyConnectedLayer(size2[0]*size2[1]*conv2_channels, n_output_classes)
         
         self.layers = [self.conv1, self.relu1, self.maxpool1, 
                        self.conv2, self.relu2, self.maxpool2,
@@ -52,7 +62,7 @@ class ConvNet:
         """
                 
         for name, param in self.params().items():
-            param.grad = 0
+            param.grad[:] = 0
             
         x = X.copy()
 

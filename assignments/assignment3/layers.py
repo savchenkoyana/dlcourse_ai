@@ -218,11 +218,6 @@ class ConvolutionalLayer:
         d_in = np.zeros(self.X.shape)
         W_flat = self.W.value.reshape((-1, self.out_channels)) 
 
-        print('B', self.B.value, type(self.B.value))
-        
-        #self.B.grad[:] = 0
-        #self.W.grad[:] = 0
-        
         for i in range(out_height):
             for j in range(out_width):
                 x_flat = self.X[:, i:i+self.filter_size, j:j+self.filter_size, :]
