@@ -28,3 +28,4 @@ class MomentumSGD:
         """
         self.velocity = self.momentum * self.velocity - learning_rate * d_w
         return w + self.velocity
+    
